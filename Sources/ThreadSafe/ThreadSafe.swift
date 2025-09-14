@@ -1,5 +1,10 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
+//
+//  ThreadSafe.swift
+//  ThreadSafe
+//
+//  Created by kahoyeung on 13/09/2025.
+//
+
 import Foundation
 
 @propertyWrapper
