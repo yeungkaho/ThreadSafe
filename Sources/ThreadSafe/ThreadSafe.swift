@@ -1,8 +1,8 @@
 //
 //  ThreadSafe.swift
 //  ThreadSafe
-//
-//  Created by kahoyeung on 13/09/2025.
+//  https://github.com/yeungkaho/ThreadSafe.git
+//  Created by Kaho Yeung on 13/09/2025.
 //
 
 import Foundation
@@ -115,5 +115,75 @@ final class RWLock {
         pthread_rwlock_wrlock(&rwlock)
         defer { pthread_rwlock_unlock(&rwlock) }
         return body()
+    }
+}
+
+// conform to various protocols so using the property wrapper won't break existing behaviours
+
+extension ThreadSafe: CustomStringConvertible where T: CustomStringConvertible {
+    public var description: String {
+        wrappedValue.description
+    }
+}
+
+extension ThreadSafe: CustomDebugStringConvertible where T: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        wrappedValue.debugDescription
+    }
+}
+
+extension ThreadSafe: CustomReflectable where T: CustomReflectable {
+    public var customMirror: Mirror {
+        Mirror(reflecting: wrappedValue)
+    }
+}
+
+extension ThreadSafe: Equatable where T: Equatable {
+    public static func == (lhs: ThreadSafe, rhs: ThreadSafe) -> Bool {
+        lhs.wrappedValue == rhs.wrappedValue
+    }
+}
+
+extension ThreadSafe: @unchecked Sendable where T: Sendable {}
+
+extension ThreadSafe: Encodable where T: Encodable {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(wrappedValue)
+    }
+}
+
+extension ThreadSafe: Decodable where T: Decodable {
+    public init(from decoder: any Decoder) throws {
+        do {
+            let value = try T(from: decoder)
+            self.init(wrappedValue: value)
+        } catch {
+            throw error
+        }
+    }
+}
+
+extension KeyedDecodingContainer {
+    // This extension fixes the keyNotFound error when a optional value is absent in the data to be decoded
+    public func decode<T: Decodable & ExpressibleByNilLiteral>(
+        _ type: ThreadSafe<T>.Type,
+        forKey key: Key
+    ) throws -> ThreadSafe<T> {
+        guard let value = try self.decodeIfPresent(type, forKey: key) else {
+            return ThreadSafe(wrappedValue: nil)
+        }
+        return value
+    }
+}
+
+extension KeyedEncodingContainer {
+    // This extension allows nil values to be ignored by the encoder
+    public mutating func encode<T: Encodable & ExpressibleByNilLiteral>(_ value: ThreadSafe<T>, forKey key: KeyedEncodingContainer<K>.Key) throws {
+        let mirror = Mirror(reflecting: value.wrappedValue)
+        guard mirror.displayStyle != .optional || !mirror.children.isEmpty else {
+            return
+        }
+        try encodeIfPresent(value, forKey: key)
     }
 }
