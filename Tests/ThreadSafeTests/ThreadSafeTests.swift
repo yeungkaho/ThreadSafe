@@ -98,7 +98,7 @@ struct TestEquatable {
         @ThreadSafe var value: Value
     }
     
-    @Test func testIntEquatable() {
+    @Test func testEquatable() {
         
         let int1 = TestStruct(value: 1)
         let int2 = TestStruct(value: 1)
